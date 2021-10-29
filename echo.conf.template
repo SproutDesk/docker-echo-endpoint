@@ -1,0 +1,39 @@
+server {
+    listen ${NGINX_PORT:-80} default_server;
+    server_name www.${NGINX_HOST:-localhost} ${NGINX_HOST:-localhost};
+    root /echofiles/webroot;
+    expires off;
+
+    fancyindex on;
+    fancyindex_exact_size ${FANCYINDEX_EXACT_SIZE:-off};
+    fancyindex_localtime on;
+    fancyindex_default_sort date_desc;
+    fancyindex_hide_symlinks on;
+    fancyindex_header "/theme/header.html";
+    fancyindex_footer "/theme/footer.html";
+    fancyindex_show_path   off;
+    fancyindex_ignore ".gitignore";
+
+    location = / {
+        if ($$request_method != "GET") {
+            rewrite / /echo$$is_args$$args;
+        }
+    }
+
+    location / {
+        try_files $$uri $$uri/ /echo$is_args$args;
+    }
+
+    location /theme { alias /echofiles/theme; }
+    location /favicon.ico { try_files /theme/favicon.ico =404; }
+
+    location = /echo {
+        access_log /echofiles/webroot/$$request_method-$$request_id dumpfile;
+        if ($$arg_echoheader) {
+            echo_before_body $$echo_client_request_headers;
+            access_log /echofiles/webroot/$$request_method-$$request_id dumpwithheaders;
+        }
+        echo_read_request_body;
+        echo $$echo_request_body;
+    }
+}
